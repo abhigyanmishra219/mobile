@@ -23,7 +23,7 @@ export default function ListingDetailScreen() {
             title=""
             variant="ghost"
             size="sm"
-            onPress={() => {}}
+            onPress={() => { }}
             icon={<Share2 size={18} color={colors.forestGreen} />}
           />
         }
