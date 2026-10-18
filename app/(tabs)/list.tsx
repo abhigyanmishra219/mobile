@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
@@ -7,15 +8,27 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { colors, spacing, borderRadius, typography } from '@/theme';
+import { useAuth } from '@/features/auth/AuthContext';
 import { Building, Wrench, ShieldCheck, CheckCircle2 } from 'lucide-react-native';
 
 export default function ListTabScreen() {
+  const { isAuthenticated } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
+  const [authPromptVisible, setAuthPromptVisible] = useState(false);
   const [selectedType, setSelectedType] = useState<'property' | 'service'>('property');
 
-  const openIntroModal = (type: 'property' | 'service') => {
+  const handleAction = (type: 'property' | 'service') => {
     setSelectedType(type);
-    setModalVisible(true);
+    if (!isAuthenticated) {
+      setAuthPromptVisible(true);
+    } else {
+      setModalVisible(true);
+    }
+  };
+
+  const handleNavigateToLogin = () => {
+    setAuthPromptVisible(false);
+    router.push('/(auth)/login?redirect=/(tabs)/list');
   };
 
   return (
@@ -42,7 +55,7 @@ export default function ListTabScreen() {
         <Card
           variant="elevated"
           style={styles.optionCard}
-          onPress={() => openIntroModal('property')}
+          onPress={() => handleAction('property')}
         >
           <View style={styles.optionHeader}>
             <View style={styles.iconCircle}>
@@ -69,7 +82,7 @@ export default function ListTabScreen() {
             title="List Property"
             variant="primary"
             size="md"
-            onPress={() => openIntroModal('property')}
+            onPress={() => handleAction('property')}
             style={styles.cardButton}
           />
         </Card>
@@ -78,7 +91,7 @@ export default function ListTabScreen() {
         <Card
           variant="elevated"
           style={styles.optionCard}
-          onPress={() => openIntroModal('service')}
+          onPress={() => handleAction('service')}
         >
           <View style={styles.optionHeader}>
             <View style={[styles.iconCircle, { backgroundColor: colors.lightPurple }]}>
@@ -105,7 +118,7 @@ export default function ListTabScreen() {
             title="Offer Service"
             variant="secondary"
             size="md"
-            onPress={() => openIntroModal('service')}
+            onPress={() => handleAction('service')}
             style={styles.cardButton}
           />
         </Card>
@@ -119,15 +132,27 @@ export default function ListTabScreen() {
         </View>
       </View>
 
-      {/* Info Modal */}
+      {/* Auth Guard Prompt Modal */}
+      <Modal
+        visible={authPromptVisible}
+        onClose={() => setAuthPromptVisible(false)}
+        title="Sign In Required"
+        description="You need to sign in with your Google account before posting a property or service listing."
+        confirmText="Sign In with Google"
+        confirmVariant="primary"
+        onConfirm={handleNavigateToLogin}
+        cancelText="Cancel"
+      />
+
+      {/* Info Modal for Authenticated User */}
       <Modal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        title={selectedType === 'property' ? 'Property Listing Flow' : 'Service Listing Flow'}
+        title={selectedType === 'property' ? 'Property Listing Wizard' : 'Service Listing Wizard'}
         description={`The complete multi-step creation wizard for ${
           selectedType === 'property' ? 'properties' : 'local services'
         } (including camera/gallery photo upload and moderation submission) will be activated in Milestone M6.`}
-        cancelText="Got it"
+        cancelText="Understood"
       />
     </ScreenContainer>
   );

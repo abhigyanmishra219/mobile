@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { ApiClientError, ApiSuccessResponse, ApiResponse } from '@/types/api';
+import { getSessionToken } from '@/services/auth/tokenStorage';
 
 /**
  * Default fallback base URL depending on execution platform:
@@ -16,13 +17,15 @@ const getDefaultBaseUrl = (): string => {
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '') || getDefaultBaseUrl();
 const DEFAULT_TIMEOUT_MS = 15000;
 
-let authTokenGetter: (() => Promise<string | null> | string | null) | null = null;
+let authTokenGetter: (() => Promise<string | null> | string | null) | null = getSessionToken;
+let onUnauthorizedHandler: (() => void) | null = null;
 
-/**
- * Configure an auth token retriever for Bearer authorization in subsequent phases (M2).
- */
 export function setAuthTokenGetter(getter: () => Promise<string | null> | string | null) {
   authTokenGetter = getter;
+}
+
+export function setOnUnauthorized(handler: () => void) {
+  onUnauthorizedHandler = handler;
 }
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
@@ -67,7 +70,7 @@ async function request<T>(
         requestHeaders['Authorization'] = `Bearer ${token}`;
       }
     } catch {
-      // In M1, token retrieval failures do not block public requests
+      // Token retrieval failure
     }
   }
 
@@ -90,6 +93,10 @@ async function request<T>(
         response.status,
         'INVALID_RESPONSE'
       );
+    }
+
+    if (response.status === 401) {
+      onUnauthorizedHandler?.();
     }
 
     if (!response.ok || !json.success) {
